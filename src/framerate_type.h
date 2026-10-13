@@ -84,6 +84,23 @@ DECLARE_POSTFIX_INCREMENT(PerformanceElement)
 /** Type used to hold a performance timing measurement */
 typedef uint64 TimingMeasurement;
 
+#ifdef __MINT__
+/* Each measurement reads the clock twice, i.e. two system calls on MiNT;
+ * measure nothing, so that the calls compile to nothing, too. */
+class PerformanceMeasurer {
+public:
+	PerformanceMeasurer(PerformanceElement elem) {}
+	void SetExpectedRate(double rate) {}
+	static void SetInactive(PerformanceElement elem) {}
+	static void Paused(PerformanceElement elem) {}
+};
+
+class PerformanceAccumulator {
+public:
+	PerformanceAccumulator(PerformanceElement elem) {}
+	static void Reset(PerformanceElement elem) {}
+};
+#else
 /**
  * RAII class for measuring simple elements of performance.
  * Construct an object with the appropriate element parameter when processing begins,
@@ -121,6 +138,7 @@ public:
 	~PerformanceAccumulator();
 	static void Reset(PerformanceElement elem);
 };
+#endif /* __MINT__ */
 
 void ShowFramerateWindow();
 

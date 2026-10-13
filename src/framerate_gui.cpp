@@ -210,6 +210,7 @@ namespace {
 }
 
 
+#ifndef __MINT__
 /**
  * Return a timestamp with \c TIMESTAMP_PRECISION ticks per second precision.
  * The basis of the timestamp is implementation defined, but the value should be steady,
@@ -300,6 +301,7 @@ void PerformanceAccumulator::Reset(PerformanceElement elem)
 {
 	_pf_data[elem].BeginAccumulate(GetPerformanceTimer());
 }
+#endif /* __MINT__ */
 
 
 void ShowFrametimeGraphWindow(PerformanceElement elem);
