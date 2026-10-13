@@ -1712,8 +1712,23 @@ void LoadFromConfig(bool minimal)
 	IniFile *ini = IniLoadConfig();
 	if (!minimal) ResetCurrencies(false); // Initialize the array of currencies, without preserving the custom one
 
+#ifdef __MINT__
+	if (minimal) {
+		/* The sprites loaded until the other settings are loaded are made for
+		 * these zoom levels; the default ones do not need the sprites to be
+		 * scaled up */
+		_settings_client.gui.zoom_min = ZOOM_LVL_MIN_DEFAULT;
+		_settings_client.gui.zoom_max = ZOOM_LVL_MAX;
+	}
+#endif
+
 	/* Load basic settings only during bootstrap, load other settings not during bootstrap */
 	HandleSettingDescs(ini, IniLoadSettings, IniLoadSettingList, minimal, !minimal);
+
+#ifdef __MINT__
+	/* The cached sprites may lack the zoom levels below the default minimum */
+	if (!minimal && _settings_client.gui.zoom_min < ZOOM_LVL_MIN_DEFAULT) GfxClearSpriteCache();
+#endif
 
 	if (!minimal) {
 		_grfconfig_newgame = GRFLoadConfig(ini, "newgrf", false);

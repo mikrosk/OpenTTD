@@ -49,6 +49,14 @@ enum ZoomLevel {
 };
 DECLARE_POSTFIX_INCREMENT(ZoomLevel)
 
+#ifdef __MINT__
+/* Every sprite is scaled up when it is loaded to provide the zoom levels
+ * below the size of the original sprites, which takes too long on a 68k CPU */
+static const ZoomLevel ZOOM_LVL_MIN_DEFAULT = ZOOM_LVL_OUT_4X; ///< Default minimum zoom level.
+#else
+static const ZoomLevel ZOOM_LVL_MIN_DEFAULT = ZOOM_LVL_MIN;    ///< Default minimum zoom level.
+#endif
+
 /** Type for storing the zoom level in a byte. */
 typedef SimpleTinyEnumT<ZoomLevel, byte> ZoomLevelByte;
 

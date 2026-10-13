@@ -329,10 +329,50 @@ static bool PadSprites(SpriteLoader::Sprite *sprite, uint8 sprite_avail)
 	return true;
 }
 
+#ifdef __MINT__
+/**
+ * Get the lowest zoom level the current blitter draws a sprite from.
+ * @param type Type of the sprite.
+ * @return The zoom level.
+ */
+static ZoomLevel GetLowestDrawnZoomLevel(SpriteType type)
+{
+	/* The simple blitters scale the fully zoomed image while drawing */
+	if (strstr(BlitterFactory::GetCurrentBlitter()->GetName(), "-simple") != NULL) return ZOOM_LVL_NORMAL;
+	/* ReadSprite() passes the font zoom level as the fully zoomed image */
+	if (type == ST_FONT) return ZOOM_LVL_FONT;
+	return _settings_client.gui.zoom_min;
+}
+#endif
+
 static bool ResizeSprites(SpriteLoader::Sprite *sprite, uint8 sprite_avail, uint32 file_slot, uint32 file_pos)
 {
-	/* Create a fully zoomed image if it does not exist */
 	ZoomLevel first_avail = static_cast<ZoomLevel>(FIND_FIRST_BIT(sprite_avail));
+#ifdef __MINT__
+	if (first_avail != ZOOM_LVL_NORMAL && first_avail <= GetLowestDrawnZoomLevel(sprite[ZOOM_LVL_NORMAL].type)) {
+		/* The zoom levels below the first available one are never drawn, so
+		 * the fully zoomed image is not created; the blitters still need its
+		 * size and offsets */
+		uint8 scaled_1 = ScaleByZoom(1, first_avail);
+		if (sprite[first_avail].width * scaled_1 > UINT16_MAX || sprite[first_avail].height * scaled_1 > UINT16_MAX) return false;
+
+		if (!PadSprites(sprite, sprite_avail)) return false;
+
+		sprite[ZOOM_LVL_NORMAL].width  = sprite[first_avail].width  * scaled_1;
+		sprite[ZOOM_LVL_NORMAL].height = sprite[first_avail].height * scaled_1;
+		sprite[ZOOM_LVL_NORMAL].x_offs = sprite[first_avail].x_offs * scaled_1;
+		sprite[ZOOM_LVL_NORMAL].y_offs = sprite[first_avail].y_offs * scaled_1;
+
+		/* Fonts are drawn at the font zoom level only */
+		ZoomLevel last = (sprite[ZOOM_LVL_NORMAL].type == ST_FONT) ? (ZoomLevel)ZOOM_LVL_FONT : ZOOM_LVL_MAX;
+		for (ZoomLevel zoom = (ZoomLevel)(first_avail + 1); zoom <= last; zoom++) {
+			if (!HasBit(sprite_avail, zoom)) ResizeSpriteOut(sprite, zoom);
+		}
+		return true;
+	}
+#endif
+
+	/* Create a fully zoomed image if it does not exist */
 	if (first_avail != ZOOM_LVL_NORMAL) {
 		if (!ResizeSpriteIn(sprite, first_avail, ZOOM_LVL_NORMAL)) return false;
 		SetBit(sprite_avail, ZOOM_LVL_NORMAL);
