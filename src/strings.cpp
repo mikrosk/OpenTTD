@@ -2102,7 +2102,13 @@ void CheckForMissingGlyphs(bool base_font, MissingGlyphSearcher *searcher)
 {
 	static LanguagePackGlyphSearcher pack_searcher;
 	if (searcher == NULL) searcher = &pack_searcher;
+#ifdef __MINT__
+	/* Searching all strings takes seconds on a 68k CPU, and without FreeType
+	 * there is no other font to fall back to anyway */
+	bool bad_font = !base_font;
+#else
 	bool bad_font = !base_font || searcher->FindMissingGlyphs(NULL);
+#endif
 #ifdef WITH_FREETYPE
 	if (bad_font) {
 		/* We found an unprintable character... lets try whether we can find
