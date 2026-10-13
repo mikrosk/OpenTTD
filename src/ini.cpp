@@ -78,8 +78,9 @@ bool IniFile::SaveToDisk(const char *filename)
  * flushed to the disk. So we manually flush it do disk if we have the
  * APIs to do so. We only need to flush the data as the metadata itself
  * (modification date etc.) is not important to us; only the real data is.
+ * MiNTLib advertises _POSIX_SYNCHRONIZED_IO but has no fdatasync().
  */
-#if defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0
+#if defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0 && !defined(__MINT__)
 	int ret = fdatasync(fileno(f));
 	fclose(f);
 	if (ret != 0) return false;

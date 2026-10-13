@@ -128,6 +128,7 @@ AWKCOMMAND='
 		if ($0 == "FLUIDSYNTH"  && "'$fluidsynth'" == "" )         { next; }
 		if ($0 == "HAVE_THREAD" && "'$with_threads'" == "0")       { next; }
 		if ($0 == "SSE"         && "'$with_sse'" != "1")           { next; }
+		if ($0 == "MINT"        && "'$os'" != "MINT")              { next; }
 
 		skip += 1;
 

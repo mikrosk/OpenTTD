@@ -46,7 +46,9 @@ src/os/windows/ottdres.rc
 
 /Makefile*
 !/Makefile.msvc
+!/Makefile.atari
 /config.*
 !/config.lib
 !*.in
 *.tmp
+/build-atari-*

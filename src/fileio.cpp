@@ -1066,7 +1066,7 @@ void DetermineBasePaths(const char *exe)
 	AppendPathSeparator(tmp, lastof(tmp));
 	_searchpaths[SP_PERSONAL_DIR_XDG] = stredup(tmp);
 #endif
-#if defined(__MORPHOS__) || defined(__AMIGA__) || defined(DOS) || defined(OS2) || !defined(WITH_PERSONAL_DIR)
+#if defined(__MORPHOS__) || defined(__AMIGA__) || defined(DOS) || defined(OS2) || defined(__MINT__) || !defined(WITH_PERSONAL_DIR)
 	_searchpaths[SP_PERSONAL_DIR] = NULL;
 #else
 #ifdef __HAIKU__
@@ -1135,7 +1135,7 @@ void DetermineBasePaths(const char *exe)
 		}
 	}
 
-#if defined(__MORPHOS__) || defined(__AMIGA__) || defined(DOS) || defined(OS2)
+#if defined(__MORPHOS__) || defined(__AMIGA__) || defined(DOS) || defined(OS2) || defined(__MINT__)
 	_searchpaths[SP_INSTALLATION_DIR] = NULL;
 #else
 	seprintf(tmp, lastof(tmp), "%s", GLOBAL_DATA_DIR);

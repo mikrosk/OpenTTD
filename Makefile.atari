@@ -1,0 +1,85 @@
+# This file is part of OpenTTD.
+# OpenTTD is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 2.
+# OpenTTD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
+
+#
+# Cross-compilation for Atari TOS/FreeMiNT with the m68k-atari-mintelf
+# toolchain. Every CPU variant is configured and built out of tree in its
+# own directory; the executable (openttd.gtp) and its data files end up
+# in $(BUILD_PREFIX)-<variant>/bundle.
+#
+#   make -f Makefile.atari [all|060|cf|clean]
+#
+#   060  68030/68040/68060 with FPU (TT, Falcon, CT60), tuned for 68060
+#   cf   ColdFire V4e (FireBee)
+#
+
+HOST         := m68k-atari-mintelf
+BUILD_PREFIX ?= build-atari
+ROOT_DIR     := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+
+# -mfastcall passes arguments in registers; the libraries are taken from the
+# matching multilib directory, so they have to be built with it, too
+CPU_060 := -m68020-60 -mtune=68060 -mfastcall
+CPU_cf  := -mcpu=5475 -mfastcall
+
+# The libraries disabled here are not part of a usual MiNT sysroot; network
+# support is left out to keep the executable small.
+CONFIGURE_FLAGS ?= \
+	--disable-network \
+	--without-liblzma \
+	--without-liblzo2 \
+	--without-freetype \
+	--without-fontconfig \
+	--without-icu \
+	--without-iconv \
+	--without-xdg-basedir \
+	--without-libtimidity \
+	--without-fluidsynth \
+	--without-allegro \
+	--without-grfcodec
+
+# SDL's audio interrupt handler writes to the process memory regardless of
+# which process is running, hence --msuper-memory
+LDFLAGS_ATARI ?= -Wl,--stack,512k -Wl,--msuper-memory
+
+VARIANTS := 060 cf
+
+.PHONY: all clean $(VARIANTS)
+
+all: $(VARIANTS)
+
+# Files of the generic bundle which are of no use on Atari: example scripts
+# (mostly for network play), multiplayer docs, man page, desktop icons and
+# the release notes
+BUNDLE_UNUSED := scripts docs man media changelog.txt known-bugs.txt
+
+# GEM program taking parameters, i.e. drivers and blitter can be chosen
+# from the desktop
+$(VARIANTS): %: $(BUILD_PREFIX)-%/config.cache
+	$(MAKE) -C $(BUILD_PREFIX)-$* bundle BUNDLE_DIR="$(abspath $(BUILD_PREFIX)-$*)/bundle"
+	mv $(BUILD_PREFIX)-$*/bundle/openttd $(BUILD_PREFIX)-$*/bundle/openttd.gtp
+	rm -rf $(addprefix $(BUILD_PREFIX)-$*/bundle/,$(BUNDLE_UNUSED))
+	find $(BUILD_PREFIX)-$*/bundle/lang -name '*.lng' ! -name english.lng -delete
+
+# The generated Makefile puts the language and base set files next to the
+# executable, so the build directory needs a copy of the data in bin/
+$(BUILD_PREFIX)-%/config.cache:
+	mkdir -p $(@D)
+	cp -R $(ROOT_DIR)/bin $(@D)/
+	cd $(@D) && \
+		CFLAGS="$(CPU_$*)" \
+		CXXFLAGS="$(CPU_$*)" \
+		LDFLAGS="$(CPU_$*) $(LDFLAGS_ATARI)" \
+		PKG_CONFIG_LIBDIR="`$(HOST)-gcc -print-sysroot`/usr/lib/`$(HOST)-gcc $(CPU_$*) -print-multi-directory`/pkgconfig" \
+		$(ROOT_DIR)/configure \
+			--host=$(HOST) \
+			--os=MINT \
+			--pkg-config=pkg-config \
+			--enable-static \
+			--enable-strip \
+			$(CONFIGURE_FLAGS)
+
+clean:
+	rm -rf $(addprefix $(BUILD_PREFIX)-,$(VARIANTS))
