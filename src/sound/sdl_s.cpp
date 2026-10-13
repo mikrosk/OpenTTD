@@ -46,7 +46,11 @@ const char *SoundDriver_SDL::Start(const char * const *parm)
 	}
 	if (ret_code == -1) return SDL_GetError();
 
+#ifdef __MINT__
+	spec.freq = GetDriverParamInt(parm, "hz", 22050);
+#else
 	spec.freq = GetDriverParamInt(parm, "hz", 44100);
+#endif
 	spec.format = AUDIO_S16SYS;
 	spec.channels = 2;
 	spec.samples = GetDriverParamInt(parm, "samples", 1024);
