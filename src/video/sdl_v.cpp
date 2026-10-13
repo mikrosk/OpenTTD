@@ -49,6 +49,7 @@ static SDL_Rect _dirty_rects[MAX_DIRTY_RECTS];
 static int _num_dirty_rects;
 static int _use_hwpalette;
 static int _requested_hwpalette; /* Did we request a HWPALETTE for the current video mode? */
+static Dimension _window_size; ///< Size of the window, restored when leaving full screen.
 
 void VideoDriver_SDL::MakeDirty(int left, int top, int width, int height)
 {
@@ -630,6 +631,7 @@ const char *VideoDriver_SDL::Start(const char * const *parm)
 	if (ret_code == -1) return SDL_GetError();
 
 	GetVideoModes();
+	_window_size = _cur_resolution;
 	if (!CreateMainSurface(_cur_resolution.width, _cur_resolution.height)) {
 		return SDL_GetError();
 	}
@@ -796,12 +798,18 @@ void VideoDriver_SDL::MainLoop()
 		_draw_mutex = NULL;
 		_draw_thread = NULL;
 	}
+
+	/* The configuration gets the window size; the full screen mode is
+	 * chosen from it again on the next start */
+	if (_fullscreen) _cur_resolution = _window_size;
 }
 
 bool VideoDriver_SDL::ChangeResolution(int w, int h)
 {
 	if (_draw_mutex != NULL) _draw_mutex->BeginCritical(true);
 	bool ret = CreateMainSurface(w, h);
+	/* A resolution chosen by the player applies to the window, too */
+	if (ret) _window_size = _cur_resolution;
 	if (_draw_mutex != NULL) _draw_mutex->EndCritical(true);
 	return ret;
 }
@@ -809,9 +817,12 @@ bool VideoDriver_SDL::ChangeResolution(int w, int h)
 bool VideoDriver_SDL::ToggleFullscreen(bool fullscreen)
 {
 	if (_draw_mutex != NULL) _draw_mutex->BeginCritical(true);
+	/* The full screen mode may differ from the window size */
+	if (fullscreen && !_fullscreen) _window_size = _cur_resolution;
 	_fullscreen = fullscreen;
 	GetVideoModes(); // get the list of available video modes
-	bool ret = _num_resolutions != 0 && CreateMainSurface(_cur_resolution.width, _cur_resolution.height);
+	const Dimension size = fullscreen ? _cur_resolution : _window_size;
+	bool ret = _num_resolutions != 0 && CreateMainSurface(size.width, size.height);
 
 	if (!ret) {
 		/* switching resolution failed, put back full_screen to original status */
