@@ -405,6 +405,7 @@ music/cocoa_m.h
 music/extmidi.h
 music/libtimidity.h
 music/fluidsynth.h
+music/mint_m.h
 music/os2_m.h
 music/qtmidi.h
 os/macosx/macos.h
@@ -1116,7 +1117,11 @@ music/midifile.cpp
 	#else
 		#if MORPHOS
 		#else
-			music/extmidi.cpp
+			#if MINT
+				music/mint_m.cpp
+			#else
+				music/extmidi.cpp
+			#end
 		#end
 	#end
 #end
