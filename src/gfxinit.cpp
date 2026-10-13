@@ -406,6 +406,12 @@ MD5File::ChecksumResult MD5File::CheckMD5(Subdirectory subdir, size_t max_size) 
 
 	if (f == NULL) return CR_NO_FILE;
 
+#ifdef __MINT__
+	/* Checksumming the base set files at every start takes too long on a 68k
+	 * CPU; a damaged file is not detected then */
+	FioFCloseFile(f);
+	return CR_MATCH;
+#else
 	size = min(size, max_size);
 
 	Md5 checksum;
@@ -422,6 +428,7 @@ MD5File::ChecksumResult MD5File::CheckMD5(Subdirectory subdir, size_t max_size) 
 
 	checksum.Finish(digest);
 	return memcmp(this->hash, digest, sizeof(this->hash)) == 0 ? CR_MATCH : CR_MISMATCH;
+#endif
 }
 
 /** Names corresponding to the GraphicsFileType */
