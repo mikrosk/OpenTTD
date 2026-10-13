@@ -51,8 +51,17 @@ const char *SoundDriver_SDL::Start(const char * const *parm)
 	spec.channels = 2;
 	spec.samples = GetDriverParamInt(parm, "samples", 1024);
 	spec.callback = fill_sound_buffer;
-	MxInitialize(spec.freq);
-	SDL_OpenAudio(&spec, &spec);
+	spec.userdata = NULL;
+
+	SDL_AudioSpec obtained;
+	if (SDL_OpenAudio(&spec, &obtained) == -1) return SDL_GetError();
+	if (obtained.format != AUDIO_S16SYS || obtained.channels != 2) {
+		SDL_CloseAudio();
+		spec.freq = obtained.freq;
+		if (SDL_OpenAudio(&spec, NULL) == -1) return SDL_GetError();
+		obtained = spec;
+	}
+	MxInitialize(obtained.freq);
 	SDL_PauseAudio(0);
 	return NULL;
 }
