@@ -62,6 +62,15 @@ $(VARIANTS): %: $(BUILD_PREFIX)-%/config.cache
 	mv $(BUILD_PREFIX)-$*/bundle/openttd $(BUILD_PREFIX)-$*/bundle/openttd.gtp
 	rm -rf $(addprefix $(BUILD_PREFIX)-$*/bundle/,$(BUNDLE_UNUSED))
 	find $(BUILD_PREFIX)-$*/bundle/lang -name '*.lng' ! -name english.lng -delete
+	# 8+3 file names, the MiNT build looks for both: compat_1.2.nut ->
+	# compat12.nut, orig_extra.grf -> orig_ext.grf; orig_dos_de.obg would
+	# become orig_dos.obg
+	cd $(BUILD_PREFIX)-$*/bundle && \
+	for f in ai/compat_*.nut game/compat_*.nut; do \
+		mv $$f `dirname $$f`/compat`basename $$f .nut | sed 's/^compat_//; s/\.//g'`.nut; \
+	done && \
+	mv baseset/orig_extra.grf baseset/orig_ext.grf && \
+	mv baseset/orig_dos_de.obg baseset/orig_de.obg
 
 # The generated Makefile puts the language and base set files next to the
 # executable, so the build directory needs a copy of the data in bin/

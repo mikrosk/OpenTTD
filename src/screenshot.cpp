@@ -30,8 +30,14 @@
 
 #include "safeguards.h"
 
+#ifdef __MINT__
+/* Short enough for 8+3 file names with an index, e.g. shot#12.png */
+static const char * const SCREENSHOT_NAME = "shot"; ///< Default filename of a saved screenshot.
+static const char * const HEIGHTMAP_NAME  = "hmap"; ///< Default filename of a saved heightmap.
+#else
 static const char * const SCREENSHOT_NAME = "screenshot"; ///< Default filename of a saved screenshot.
 static const char * const HEIGHTMAP_NAME  = "heightmap";  ///< Default filename of a saved heightmap.
+#endif
 
 char _screenshot_format_name[8];      ///< Extension of the current screenshot format (corresponds with #_cur_screenshot_format).
 uint _num_screenshot_formats;         ///< Number of available screenshot formats.
@@ -669,11 +675,16 @@ static const char *MakeScreenshotName(const char *default_fn, const char *ext, b
 	bool generate = StrEmpty(_screenshot_name);
 
 	if (generate) {
+#ifdef __MINT__
+		/* A company name and a date do not fit into an 8+3 file name */
+		strecpy(_screenshot_name, default_fn, lastof(_screenshot_name));
+#else
 		if (_game_mode == GM_EDITOR || _game_mode == GM_MENU || _local_company == COMPANY_SPECTATOR) {
 			strecpy(_screenshot_name, default_fn, lastof(_screenshot_name));
 		} else {
 			GenerateDefaultSaveName(_screenshot_name, lastof(_screenshot_name));
 		}
+#endif
 	}
 
 	/* Add extension to screenshot file */

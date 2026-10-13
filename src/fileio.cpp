@@ -397,6 +397,37 @@ char *FioGetDirectory(char *buf, const char *last, Subdirectory subdir)
 	return buf;
 }
 
+#ifdef __MINT__
+/**
+ * Shorten the last component of a path to 8+3 characters.
+ * @param path Path to shorten.
+ * @param buf  Destination buffer.
+ * @param last Last element of the destination buffer.
+ * @return Whether the path has been changed.
+ */
+static bool ShortenFileName(const char *path, char *buf, const char *last)
+{
+	strecpy(buf, path, last);
+
+	char *name = strrchr(buf, PATHSEPCHAR);
+	name = (name == NULL) ? buf : name + 1;
+	char *ext = strrchr(name, '.');
+	if (ext == NULL) ext = strchr(name, '\0');
+
+	bool changed = false;
+	if (ext - name > 8) {
+		memmove(name + 8, ext, strlen(ext) + 1);
+		ext = name + 8;
+		changed = true;
+	}
+	if (*ext == '.' && strlen(ext) > 4) {
+		ext[4] = '\0';
+		changed = true;
+	}
+	return changed;
+}
+#endif
+
 static FILE *FioFOpenFileSp(const char *filename, const char *mode, Searchpath sp, Subdirectory subdir, size_t *filesize)
 {
 #if defined(_WIN32) && defined(UNICODE)
@@ -424,6 +455,13 @@ static FILE *FioFOpenFileSp(const char *filename, const char *mode, Searchpath s
 #if !defined(_WIN32)
 	if (f == NULL && strtolower(buf + ((subdir == NO_DIRECTORY) ? 0 : strlen(_searchpaths[sp]) - 1))) {
 		f = fopen(buf, mode);
+	}
+#endif
+#ifdef __MINT__
+	if (f == NULL && mode[0] == 'r') {
+		/* The file may exist under its 8+3 name, e.g. orig_ext.grf for orig_extra.grf */
+		char short_name[MAX_PATH];
+		if (ShortenFileName(filename, short_name, lastof(short_name))) return FioFOpenFileSp(short_name, mode, sp, subdir, filesize);
 	}
 #endif
 	if (f != NULL && filesize != NULL) {

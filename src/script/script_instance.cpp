@@ -113,11 +113,31 @@ bool ScriptInstance::LoadCompatibilityScripts(const char *api_version, Subdirect
 {
 	char script_name[32];
 	seprintf(script_name, lastof(script_name), "compat_%s.nut", api_version);
+#ifdef __MINT__
+	/* The same with an 8+3 file name, e.g. compat12.nut for compat_1.2.nut */
+	char version[8];
+	char *v = version;
+	for (const char *p = api_version; *p != '\0' && v < lastof(version); p++) {
+		if (*p != '.') *v++ = *p;
+	}
+	*v = '\0';
+	char short_name[16];
+	seprintf(short_name, lastof(short_name), "compat%s.nut", version);
+#endif
 	char buf[MAX_PATH];
 	Searchpath sp;
 	FOR_ALL_SEARCHPATHS(sp) {
 		FioAppendDirectory(buf, lastof(buf), sp, dir);
+#ifdef __MINT__
+		char *name = strchr(buf, '\0');
+#endif
 		strecat(buf, script_name, lastof(buf));
+#ifdef __MINT__
+		if (!FileExists(buf)) {
+			*name = '\0';
+			strecat(buf, short_name, lastof(buf));
+		}
+#endif
 		if (!FileExists(buf)) continue;
 
 		if (this->engine->LoadScript(buf)) return true;

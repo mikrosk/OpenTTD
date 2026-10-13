@@ -1446,7 +1446,12 @@ static void DoAutosave()
 		static int _autosave_ctr = 0;
 
 		/* generate a savegame name and number according to _settings_client.gui.max_num_autosaves */
+#ifdef __MINT__
+		/* 8+3 file name */
+		seprintf(buf, lastof(buf), "auto%d.sav", _autosave_ctr);
+#else
 		seprintf(buf, lastof(buf), "autosave%d.sav", _autosave_ctr);
+#endif
 
 		if (++_autosave_ctr >= _settings_client.gui.max_num_autosaves) _autosave_ctr = 0;
 	}
