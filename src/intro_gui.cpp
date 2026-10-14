@@ -33,6 +33,10 @@
 #include "table/strings.h"
 #include "table/sprites.h"
 
+#ifdef __MINT__
+#include <mint/cookie.h>
+#endif
+
 #include "safeguards.h"
 
 struct SelectGameWindow : public Window {
@@ -307,6 +311,16 @@ void AskExitGame()
 		SetDParam(0, STR_OSNAME_SUNOS);
 #elif defined(DOS)
 		SetDParam(0, STR_OSNAME_DOS);
+#elif defined(__MINT__)
+		/* The operating system the game was started on, told by its cookie */
+		long cookie;
+		if (Getcookie(C_MiNT, &cookie) == C_FOUND) {
+			SetDParam(0, STR_OSNAME_MINT);
+		} else if (Getcookie(C_MagX, &cookie) == C_FOUND) {
+			SetDParam(0, STR_OSNAME_MAGIC);
+		} else {
+			SetDParam(0, STR_OSNAME_TOS);
+		}
 #else
 		SetDParam(0, STR_OSNAME_UNIX);
 #endif

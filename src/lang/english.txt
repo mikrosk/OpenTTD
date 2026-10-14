@@ -1803,6 +1803,9 @@ STR_OSNAME_MORPHOS                                              :MorphOS
 STR_OSNAME_AMIGAOS                                              :AmigaOS
 STR_OSNAME_OS2                                                  :OS/2
 STR_OSNAME_SUNOS                                                :SunOS
+STR_OSNAME_MINT                                                 :FreeMiNT
+STR_OSNAME_MAGIC                                                :MagiC
+STR_OSNAME_TOS                                                  :TOS
 
 # Abandon game
 STR_ABANDON_GAME_CAPTION                                        :{WHITE}Abandon Game
