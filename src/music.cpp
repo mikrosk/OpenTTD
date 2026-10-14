@@ -120,7 +120,7 @@ template <class Tbase_set>
 
 bool MusicSet::FillSetDetails(IniFile *ini, const char *path, const char *full_filename)
 {
-	bool ret = this->BaseSet<MusicSet, NUM_SONGS_AVAILABLE, false>::FillSetDetails(ini, path, full_filename);
+	bool ret = this->BaseSet<MusicSet, NUM_SONGS_AVAILABLE, MUSIC_IN_TARS>::FillSetDetails(ini, path, full_filename);
 	if (ret) {
 		this->num_available = 0;
 		IniGroup *names = ini->GetGroup("names");

@@ -308,8 +308,16 @@ struct MusicSongInfo {
 	int override_end;        ///< MIDI tick to end the song at (0 if no override)
 };
 
+#ifdef __MINT__
+/* The MiNT music driver reads the songs through FioFOpenFile, so they can be
+ * in a tar file; other drivers pass the file name to an external player */
+static const bool MUSIC_IN_TARS = true; ///< Whether to search for music sets in tar files.
+#else
+static const bool MUSIC_IN_TARS = false; ///< Whether to search for music sets in tar files.
+#endif
+
 /** All data of a music set. */
-struct MusicSet : BaseSet<MusicSet, NUM_SONGS_AVAILABLE, false> {
+struct MusicSet : BaseSet<MusicSet, NUM_SONGS_AVAILABLE, MUSIC_IN_TARS> {
 	/** Data about individual songs in set. */
 	MusicSongInfo songinfo[NUM_SONGS_AVAILABLE];
 	/** Number of valid songs in set. */
