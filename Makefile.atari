@@ -9,7 +9,7 @@
 # own directory; the executable (openttd.gtp) and its data files end up
 # in $(BUILD_PREFIX)-<variant>/bundle.
 #
-#   make -f Makefile.atari [all|060|cf|clean]
+#   make -f Makefile.atari [all|060|cf|060_dist|cf_dist|clean]
 #
 #   060  68030/68040/68060 with FPU (TT, Falcon, CT60), tuned for 68060
 #   cf   ColdFire V4e (FireBee)
@@ -19,13 +19,14 @@ HOST         := m68k-atari-mintelf
 BUILD_PREFIX ?= build-atari
 ROOT_DIR     := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
-# -mfastcall passes arguments in registers; the libraries are taken from the
-# matching multilib directory, so they have to be built with it, too
+ifeq ($(filter -j%,$(MAKEFLAGS)),)
+MAKEFLAGS += -j$(shell nproc)
+endif
+.NOTPARALLEL:
+
 CPU_060 := -m68020-60 -mtune=68060 -mfastcall
 CPU_cf  := -mcpu=5475 -mfastcall
 
-# The libraries disabled here are not part of a usual MiNT sysroot; network
-# support is left out to keep the executable small.
 CONFIGURE_FLAGS ?= \
 	--disable-network \
 	--without-liblzma \
@@ -40,25 +41,58 @@ CONFIGURE_FLAGS ?= \
 	--without-allegro \
 	--without-grfcodec
 
-# SDL's audio interrupt handler writes to the process memory regardless of
-# which process is running, hence --msuper-memory
 LDFLAGS_ATARI ?= -Wl,--stack,512k -Wl,--msuper-memory
 
-VARIANTS := 060 cf
+VARIANTS      := 060 cf
+DIST_VARIANTS := $(addsuffix _dist,$(VARIANTS))
 
-.PHONY: all clean $(VARIANTS)
+# Base sets of the release archives, downloaded once to $(DOWNLOAD_DIR).
+# Unless given, the version is the latest stable release, as announced in
+# latest.yaml on the OpenTTD CDN; it is only looked up for the _dist
+# targets, so building does not need a network connection.
+DOWNLOAD_DIR ?= $(BUILD_PREFIX)-download
+LATEST_VERSION = $(shell curl -fsSL https://cdn.openttd.org/$(1)-releases/latest.yaml | \
+	awk '/^- version:/ { v = $$3 } /^  name: stable/ { print v; exit }')
+
+ifneq ($(filter %_dist,$(MAKECMDGOALS)),)
+ifeq ($(OPENGFX_VERSION),)
+OPENGFX_VERSION := $(call LATEST_VERSION,opengfx)
+endif
+ifeq ($(OPENSFX_VERSION),)
+OPENSFX_VERSION := $(call LATEST_VERSION,opensfx)
+endif
+ifeq ($(OPENMSX_VERSION),)
+OPENMSX_VERSION := $(call LATEST_VERSION,openmsx)
+endif
+ifeq ($(and $(OPENGFX_VERSION),$(OPENSFX_VERSION),$(OPENMSX_VERSION)),)
+$(error Cannot determine the latest OpenGFX/OpenSFX/OpenMSX versions)
+endif
+endif
+
+BASESET_ZIPS := \
+	$(DOWNLOAD_DIR)/opengfx-$(OPENGFX_VERSION)-all.zip \
+	$(DOWNLOAD_DIR)/opensfx-$(OPENSFX_VERSION)-all.zip \
+	$(DOWNLOAD_DIR)/openmsx-$(OPENMSX_VERSION)-all.zip
+
+SDL_README_URL ?= https://raw.githubusercontent.com/libsdl-org/SDL-1.2/main/README.MiNT
+
+VERSION     := $(shell cd $(ROOT_DIR) && git describe --tags --abbrev=0)
+ISSTABLETAG := $(if $(shell echo "$(VERSION)" | grep -x '[0-9.]*'),1,0)
+VERBOSE ?= 1
+
+.PHONY: all clean $(VARIANTS) $(DIST_VARIANTS)
 
 all: $(VARIANTS)
 
 # Files of the generic bundle which are of no use on Atari: example scripts
-# (mostly for network play), multiplayer docs, man page, desktop icons and
-# the release notes
-BUNDLE_UNUSED := scripts docs man media changelog.txt known-bugs.txt
+# (mostly for network play), multiplayer docs, man page and desktop icons
+BUNDLE_UNUSED := scripts docs man media
 
 # GEM program taking parameters, i.e. drivers and blitter can be chosen
 # from the desktop
 $(VARIANTS): %: $(BUILD_PREFIX)-%/config.cache
-	$(MAKE) -C $(BUILD_PREFIX)-$* bundle BUNDLE_DIR="$(abspath $(BUILD_PREFIX)-$*)/bundle"
+	$(MAKE) -C $(BUILD_PREFIX)-$* bundle BUNDLE_DIR="$(abspath $(BUILD_PREFIX)-$*)/bundle" \
+		VERSION=$(VERSION) ISTAG=1 ISSTABLETAG=$(ISSTABLETAG) VERBOSE=$(VERBOSE)
 	mv $(BUILD_PREFIX)-$*/bundle/openttd $(BUILD_PREFIX)-$*/bundle/openttd.gtp
 	rm -rf $(addprefix $(BUILD_PREFIX)-$*/bundle/,$(BUNDLE_UNUSED))
 	find $(BUILD_PREFIX)-$*/bundle/lang -name '*.lng' ! -name english.lng -delete
@@ -72,6 +106,35 @@ $(VARIANTS): %: $(BUILD_PREFIX)-%/config.cache
 	done && \
 	mv baseset/orig_extra.grf baseset/orig_ext.grf && \
 	rm baseset/orig_dos_de.obg
+	# The title game is compressed with lzma, which is not available on
+	# MiNT; recompress it with zlib (savegame tag OTTX -> OTTZ)
+	python3 -I -c 'import lzma, sys, zlib; f = sys.argv[1]; d = open(f, "rb").read(); \
+		assert d[:4] == b"OTTX"; \
+		open(f, "wb").write(b"OTTZ" + d[4:8] + zlib.compress(lzma.decompress(d[8:]), 9))' \
+		$(BUILD_PREFIX)-$*/bundle/baseset/opntitle.dat
+
+# Everything in an "openttd" folder with 8+3 file names. The base sets
+# stay in their tar files, the MiNT build reads them from there.
+$(DIST_VARIANTS): %_dist: % $(BASESET_ZIPS)
+	rm -rf $(BUILD_PREFIX)-$*/dist $(BUILD_PREFIX)-$*/openttd-$(VERSION)-atari-$*.zip
+	mkdir -p $(BUILD_PREFIX)-$*/dist
+	cp -R $(BUILD_PREFIX)-$*/bundle $(BUILD_PREFIX)-$*/dist/openttd
+	cp $(ROOT_DIR)/os/atari/atari.txt $(BUILD_PREFIX)-$*/dist/openttd/
+	curl -fsSL -o $(BUILD_PREFIX)-$*/dist/openttd/atarisdl.txt $(SDL_README_URL)
+	cd $(BUILD_PREFIX)-$*/dist/openttd && \
+	mv changelog.txt changes.txt && \
+	mv known-bugs.txt knownbug.txt && \
+	unix2dos -q atari.txt atarisdl.txt README.md COPYING changes.txt knownbug.txt
+	unzip -p $(DOWNLOAD_DIR)/opengfx-$(OPENGFX_VERSION)-all.zip '*.tar' > $(BUILD_PREFIX)-$*/dist/openttd/baseset/opengfx.tar
+	unzip -p $(DOWNLOAD_DIR)/opensfx-$(OPENSFX_VERSION)-all.zip '*.tar' > $(BUILD_PREFIX)-$*/dist/openttd/baseset/opensfx.tar
+	unzip -p $(DOWNLOAD_DIR)/openmsx-$(OPENMSX_VERSION)-all.zip '*.tar' > $(BUILD_PREFIX)-$*/dist/openttd/baseset/openmsx.tar
+	cd $(BUILD_PREFIX)-$*/dist && zip -q -r -9 ../openttd-$(VERSION)-atari-$*.zip openttd
+
+# e.g. opengfx-8.0-all.zip from cdn.openttd.org/opengfx-releases/8.0/
+$(DOWNLOAD_DIR)/%-all.zip:
+	mkdir -p $(@D)
+	curl -fsSL -o $@.part https://cdn.openttd.org/$(word 1,$(subst -, ,$*))-releases/$(word 2,$(subst -, ,$*))/$*-all.zip
+	mv $@.part $@
 
 # The generated Makefile puts the language and base set files next to the
 # executable, so the build directory needs a copy of the data in bin/

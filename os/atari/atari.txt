@@ -1,0 +1,46 @@
+OpenTTD for Atari FreeMiNT
+==========================
+
+Everything is included and ready to play: just run openttd.gtp.
+Graphics, sounds and music come from the free OpenGFX, OpenSFX and
+OpenMSX sets.
+
+See atarisdl.txt for running the game in fullscreen (xbios video driver)
+or in a window (gem video driver) and for the peculiarities of the
+events drivers.
+
+
+Original Transport Tycoon Deluxe data
+-------------------------------------
+For the original graphics, sounds and music instead, take these files
+from this archive:
+
+  openttd.gtp
+  atari.txt, atarisdl.txt, COPYING, README.md, changes.txt, knownbug.txt
+  ai\, game\, lang\
+  baseset\ except opengfx.tar, opensfx.tar and openmsx.tar
+
+and add these files from the GAME folder of the DOS version of
+Transport Tycoon Deluxe:
+
+  GAME\TRG1.GRF     ->  baseset\trg1.grf
+  GAME\TRGC.GRF     ->  baseset\trgc.grf
+  GAME\TRGH.GRF     ->  baseset\trgh.grf
+  GAME\TRGI.GRF     ->  baseset\trgi.grf
+  GAME\TRGT.GRF     ->  baseset\trgt.grf
+  GAME\SAMPLE.CAT   ->  baseset\sample.cat
+  GAME\GM.CAT       ->  baseset\gm.cat
+
+On a case-sensitive file system (ext2) the names must be in lower case.
+The game then uses the original data, as no other complete set is left.
+
+
+Newer OpenGFX, OpenSFX and OpenMSX
+----------------------------------
+  https://www.openttd.org/downloads/opengfx-releases/latest
+  https://www.openttd.org/downloads/opensfx-releases/latest
+  https://www.openttd.org/downloads/openmsx-releases/latest
+
+Unpack the downloaded zip file and copy the .tar file from it into the
+baseset folder under an 8+3 name: opengfx.tar, opensfx.tar or
+openmsx.tar.
